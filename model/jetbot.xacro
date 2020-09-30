@@ -1,0 +1,121 @@
+<?xml version="1.0" ?>
+<robot name="JetBot">
+  <joint name="JetBot_left_wheel_hinge" type="fixed">
+    <parent link="JetBot_chassis"/>
+    <child link="JetBot_left_wheel"/>
+    <origin rpy="0       0       1.57079" xyz="0.03     0.05125  0.03"/>
+    <axis xyz="1  0  0"/>
+    <limit effort="0" lower="0" upper="0" velocity="0"/>
+  </joint>
+  <joint name="JetBot_right_wheel_hinge" type="fixed">
+    <parent link="JetBot_chassis"/>
+    <child link="JetBot_right_wheel"/>
+    <origin rpy="0       0       1.57079" xyz="0.03   -0.0595  0.03"/>
+    <axis xyz="1  0  0"/>
+    <limit effort="0" lower="0" upper="0" velocity="0"/>
+  </joint>
+  <joint name="JetBot_camera_joint" type="fixed">
+    <parent link="JetBot_chassis"/>
+    <child link="JetBot_camera_link"/>
+    <origin rpy="0    0.25  0" xyz="0.055   0      0.0857"/>
+    <axis xyz="0.96891  0       0.2474"/>
+    <limit effort="0" lower="0" upper="0" velocity="0"/>
+  </joint>
+  
+  <link name="JetBot_chassis">
+
+    <collision name="JetBot_collision">
+      <origin rpy="1.57079  0       1.57079" xyz="0     0     0.043"/>
+      <geometry>
+      <!-- <box size="0.2 .3 .1"/> -->
+        <mesh filename="package://jetbot_control/model/meshes/JetBot-v3-Chassis.dae"  scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual name="JetBot_visual">
+      <origin rpy="1.57079  0       1.57079" xyz="0     0     0.043"/>
+      <geometry>
+        <!-- <box size="0.2 .3 .1"/> -->
+        <mesh filename="package://jetbot_control/model/meshes/JetBot-v3-Chassis.dae"  scale="0.001 0.001 0.001"/>
+      </geometry>
+    </visual>
+  </link>
+  <link name="JetBot_left_wheel">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0  0  0" xyz="0  0  0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="JetBot_collision">
+      <origin rpy="0  0  0" xyz="0  0  0"/>
+      <geometry>
+      <!-- <cylinder length="0.05" radius="0.05"/> -->
+        <mesh filename="package://jetbot_control/model/meshes/JetBot-v3-Wheel.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual name="JetBot_visual">
+      <origin rpy="0  0  0" xyz="0  0  0"/>
+      <geometry>
+      <!-- <cylinder length="0.05" radius="0.05"/> -->
+        <mesh filename="package://jetbot_control/model/meshes/JetBot-v3-Wheel.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </visual>
+  </link>
+  <link name="JetBot_right_wheel">
+    <inertial>
+      <mass value="0"/>
+      <origin rpy="0  0  0" xyz="0  0  0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <collision name="JetBot_collision">
+      <origin rpy="0  0  0" xyz="0  0  0"/>
+      <geometry>
+      <!-- <cylinder length="0.05" radius="0.05"/> -->
+        <mesh filename="package://jetbot_control/model/meshes/JetBot-v3-Wheel.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+    <visual name="JetBot_visual">
+      <origin rpy="0  0  0" xyz="0  0  0"/>
+      <geometry>
+      <!-- <cylinder length="0.05" radius="0.05"/> -->
+        <mesh filename="package://jetbot_control/model/meshes/JetBot-v3-Wheel.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </visual>
+  </link>
+  <link name="JetBot_camera_link">
+    <inertial>
+      <mass value="0.1"/>
+      <origin rpy="0  0  0" xyz="0  0  0"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+    <visual name="JetBot_visual">
+      <origin rpy="0  0  0" xyz="0  0  0"/>
+      <geometry>
+        <box size="0.001 0.001 0.001"/>
+      </geometry>
+    </visual>
+  </link>
+
+    <!-- Drive controller -->
+    <gazebo>
+    <plugin name="differential_drive_controller" filename="libgazebo_ros_diff_drive.so">
+      <commandTopic>cmd_vel</commandTopic>
+      <odometryTopic>odom</odometryTopic>
+      <odometryFrame>odom</odometryFrame>
+      <odometrySource>world</odometrySource>
+      <publishOdomTF>true</publishOdomTF>
+      <robotBaseFrame>JetBot_chassis</robotBaseFrame>
+      <publishWheelTF>false</publishWheelTF>
+      <publishTf>true</publishTf>
+      <publishWheelJointState>true</publishWheelJointState>
+      <legacyMode>false</legacyMode>
+      <updateRate>30</updateRate>
+      <leftJoint>JetBot_left_wheel_hinge</leftJoint>
+      <rightJoint>JetBot_right_wheel_hinge</rightJoint>
+      <wheelSeparation>0.160</wheelSeparation>
+      <wheelDiameter>0.066</wheelDiameter>
+      <wheelAcceleration>1</wheelAcceleration>
+      <wheelTorque>10</wheelTorque>
+      <rosDebugLevel>na</rosDebugLevel>
+    </plugin>
+    </gazebo>
+</robot>
