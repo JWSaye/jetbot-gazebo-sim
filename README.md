@@ -16,7 +16,7 @@ cd ~/jetbot_ws/  && catkin build
 
 Install dependencies
 ```
-sudo apt install ros-melodic-turtlebot3-gazebo
+sudo apt install ros-melodic-turtlebot3-gazebo ros-melodic-teleop-twist-keyboard
 ```
 
 ## Run the simulator
