@@ -2,6 +2,8 @@
 
 Gazebo environments for testing JetBot navigation and perception algorithms.
 
+This uses the Gazebo models from [https://github.com/dusty-nv/jetbot_ros](https://github.com/dusty-nv/jetbot_ros) but does not require CUDA dependencies in `jetbot_camera`.
+
 ## Installation Instructions
 
 This instructions are for Ubuntu 18.04 with ROS Melodic already installed.
@@ -36,8 +38,7 @@ View camera topic
 rosrun image_view image_view image:=/jetbot/camera/image_raw
 ```
 
-
-## Simulation Environments and Image View
+### Simulation Environments and Image View
 
 ![avatar](./world/gazebo_sim_imageview.png)
 
@@ -45,10 +46,10 @@ rosrun image_view image_view image:=/jetbot/camera/image_raw
 
 ## Object Detection with Yolo and Darknet-ROS
 
-TODO
+TO DO
 
 ## Contact
 
-For any questions, write to `tiers@utu.fi`.
+For any questions, write to `jopequ@utu.fi` and `qingqli@utu.fi`.
 
-Visit us at (https://tiers.utu.fi)[https://tiers.utu.fi]
+Visit us at [https://tiers.utu.fi](https://tiers.utu.fi)
