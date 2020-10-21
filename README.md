@@ -16,7 +16,7 @@ cd ~/jetbot_ws/  && catkin build
 
 Install dependencies
 ```
-sudo apt install ros-melodic-turtlebot3-gazebo
+sudo apt install ros-melodic-turtlebot3-gazebo ros-melodic-image-view
 ```
 
 ## Run the simulator
@@ -31,11 +31,19 @@ Control the Jetbot by keyboard:
 rosrun teleop_twist_keyboard teleop_twist_keyboard.py
 ```
 
-## Simulation Environments
+View camera topic
+```
+rosrun image_view image_view image:=/jetbot/camera/image_raw
+```
 
-TODO
 
-## Object Detection with Yolo and Darket-ROS
+## Simulation Environments and Image View
+
+![avatar](./world/gazebo_sim_imageview.png)
+
+
+
+## Object Detection with Yolo and Darknet-ROS
 
 TODO
 
