@@ -13,7 +13,7 @@ Clone this repo into your catkin_ws (the code below creates a new catkin workspa
 mkdir -p  ~/jetbot_ws/src && cd ~/jetbot_ws/src
 git clone --recursive https://github.com/TIERS/jetbot-gezebo.git
 
-cd ~/jetbot_ws/  && catkin build
+cd ~/jetbot_ws/  && catkin init && catkin build
 ```
 
 Install dependencies
@@ -23,18 +23,21 @@ sudo apt install ros-melodic-turtlebot3-gazebo ros-melodic-image-view
 
 ## Run the simulator
 
-Run the simulator with the 
+Run the simulator from the terminal with:
 ```
+source ~/jetbot_ws/devel/setup.bash
 roslaunch jetbot_gazebo jetbot_gazebo_stage.launch
 ```
 
-Control the Jetbot by keyboard:
+Control the Jetbot by keyboard. Open a new terminal window/tab and run:
 ```
+source ~/jetbot_ws/devel/setup.bash
 rosrun teleop_twist_keyboard teleop_twist_keyboard.py
 ```
 
-View camera topic
+View camera topic. Open a new terminal window/tab and run:
 ```
+source ~/jetbot_ws/devel/setup.bash
 rosrun image_view image_view image:=/jetbot/camera/image_raw
 ```
 
