@@ -13,6 +13,7 @@ Clone this repo into your catkin_ws (the code below creates a new catkin workspa
 mkdir -p  ~/jetbot_ws/src && cd ~/jetbot_ws/src
 git clone --recursive https://github.com/TIERS/jetbot-gazebo.git
 
+sudo apt install python-catkin-tools
 cd ~/jetbot_ws/  && catkin init && catkin build
 ```
 
@@ -31,6 +32,7 @@ roslaunch jetbot_gazebo jetbot_gazebo_stage.launch
 
 Control the Jetbot by keyboard. Open a new terminal window/tab and run:
 ```
+sudo apt install ros-melodic-teleop-twist-keyboard
 source ~/jetbot_ws/devel/setup.bash
 rosrun teleop_twist_keyboard teleop_twist_keyboard.py
 ```
