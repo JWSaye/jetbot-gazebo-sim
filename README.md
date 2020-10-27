@@ -11,7 +11,7 @@ Clone this repo into your catkin_ws (the code below creates a new catkin workspa
 
 ```
 mkdir -p  ~/jetbot_ws/src && cd ~/jetbot_ws/src
-git clone --recursive https://github.com/TIERS/jetbot-gezebo.git
+git clone --recursive https://github.com/TIERS/jetbot-gazebo.git
 
 cd ~/jetbot_ws/  && catkin init && catkin build
 ```
