@@ -5,7 +5,7 @@
   <arg name="z_pos" default="0.0"/>
 
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
-    <arg name="world_name" value="$(find turtlebot3_gazebo)/worlds/turtlebot3_stage_4.world"/> 
+    <arg name="world_name" value="~/jetbot_ws/src/jetbot-gazebo-sim/world/dirt_path_curves.world"/> 
     <arg name="paused" value="false"/>
     <arg name="use_sim_time" value="0.1"/>
     <arg name="gui" value="true"/>
