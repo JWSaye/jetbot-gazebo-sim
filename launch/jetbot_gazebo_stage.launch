@@ -1,21 +1,32 @@
 <launch>
-  <arg name="model" default="burger"/>
+    <!-- Declare arguments with default values -->
+    <arg name="model" default="burger"/>
   <arg name="x_pos" default="-0.3"/>
   <arg name="y_pos" default="-2.65"/>
   <arg name="z_pos" default="0.0"/>
 
-  <include file="$(find gazebo_ros)/launch/empty_world.launch">
-    <arg name="world_name" value="$(find turtlebot3_gazebo)/worlds/turtlebot3_stage_4.world"/> 
-    <arg name="paused" value="false"/>
-    <arg name="use_sim_time" value="true"/>
-    <arg name="gui" value="true"/>
-    <arg name="headless" value="false"/>
-    <arg name="debug" value="false"/>
-  </include>  
+    <!-- Set environment variable for GAZEBO_MODEL_PATH -->
+    <env name="GAZEBO_MODEL_PATH" value="$(find jetbot_gazebo)/models"/>
 
+    <!-- Include Gazebo launch with world file and plugins -->
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+        <arg name="world_name" value="$(find jetbot_gazebo)/world/dirt_path_curves.world"/>
+        <arg name="verbose" value="true"/>
+        <arg name="gui" value="true"/>
+        <!-- System plugins -->
+        <!-- <arg name="extra_gazebo_args" value="-s libgazebo_ros_init.so -s libgazebo_ros_factory.so -g libgazebo_user_camera_control_system.so"/> -->
+    </include>
 
-  <param name="robot_description" command="$(find xacro)/xacro.py $(find jetbot_gazebo)/urdf/jetbot.urdf.xacro"/>
+    <param name="robot_description" command="$(find xacro)/xacro.py $(find jetbot_gazebo)/urdf/jetbot.urdf.xacro"/>
 
-  <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-urdf -model jetbot_turtle -x $(arg x_pos) -y $(arg y_pos) -z $(arg z_pos) -param robot_description" />
+    <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-urdf -model jetbot_turtle -x $(arg x_pos) -y $(arg y_pos) -z $(arg z_pos) -param robot_description" />
 
+    <!-- Node to spawn the robot model
+    <node name="spawn_entity" pkg="jetbot_ros" type="gazebo_spawn" respawn="false" output="screen">
+        <param name="name" value="$(arg robot_name)"/>
+        <param name="model" value="$(arg robot_model)"/>
+        <param name="x" value="$(arg x)"/>
+        <param name="y" value="$(arg y)"/>
+        <param name="z" value="$(arg z)"/>
+    </node> -->
 </launch>
