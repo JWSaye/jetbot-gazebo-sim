@@ -1,6 +1,6 @@
 <launch>
     <!-- Declare arguments with default values -->
-    <arg name="robot_name" default="jetbot"/>
+    <arg name="robot_name" default="jetbot_gazebo"/>
     <arg name="model" default="burger"/>
     <arg name="x_pos" default="-0.3"/>
     <arg name="y_pos" default="-2.65"/>
@@ -17,13 +17,7 @@
     </include>
 
     <!-- Node to spawn the SDF model in Gazebo -->
-    <node name="$(arg robot_name)_spawn_model" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen">
-        <param name="robot_namespace" value="$(arg robot_name)"/>
-        <!-- Correct way to include model and robot description -->
-        <arg name="sdf" value="file://$(find jetbot_gazebo)/models/simple_diff_ros/model.sdf"/>
-        <arg name="model" value="$(arg robot_name)"/>
-        <arg name="x" value="$(arg x_pos)"/>
-        <arg name="y" value="$(arg y_pos)"/>
-        <arg name="z" value="$(arg z_pos)"/>
+    <node name="$(arg robot_name)_spawn_model" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen"
+        args="-sdf -file $(find jetbot_gazebo)/models/simple_diff_ros/model.sdf -model $(arg robot_name) -x $(arg x_pos) -y $(arg y_pos) -z $(arg z_pos)">
     </node>
 </launch>
