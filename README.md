@@ -27,6 +27,30 @@ Desktop-Full Install: (Recommended) : ROS, rqt, rviz, robot-generic libraries, 2
     sudo apt install ros-melodic-desktop-full
 ```
 
+It's convenient if the ROS environment variables are automatically added to your bash session every time a new shell is launched:
+```bash
+    echo "source /opt/ros/melodic/setup.bash" >> ~/.bashrc
+    source ~/.bashrc
+```
+
+Up to now you have installed what you need to run the core ROS packages. To create and manage your own ROS workspaces, there are various tools and requirements that are distributed separately. For example, rosinstall is a frequently used command-line tool that enables you to easily download many source trees for ROS packages with one command.
+
+To install this tool and other dependencies for building ROS packages, run:
+```bash
+    sudo apt install python-rosdep python-rosinstall python-rosinstall-generator python-wstool build-essential
+```
+
+Before you can use many ROS tools, you will need to initialize rosdep. rosdep enables you to easily install system dependencies for source you want to compile and is required to run some core components in ROS. If you have not yet installed rosdep, do so as follows.
+```bash
+    sudo apt install python-rosdep
+```
+
+With the following, you can initialize rosdep.
+```bash
+    sudo rosdep init
+    rosdep update
+```
+
 ## Installation Instructions
 
 This instructions are for Ubuntu 18.04 with ROS Melodic already installed.
@@ -49,7 +73,10 @@ sudo apt install ros-melodic-turtlebot3-gazebo ros-melodic-image-view
 
 Run the simulator from the terminal with:
 ```bash
-source ~/jetbot_ws/devel/setup.bash
+echo "source ~/jetbot_ws/devel/setup.bash" >> ~/.bashrc
+echo "export GAZEBO_MODEL_PATH=/usr/share/gazebo-9/models:~/jetbot_ws/src/jetbot-gazebo-sim/models:$GAZEBO_MODEL_PATH" >> ~/.bashrc
+source ~/.bashrc
+
 roslaunch jetbot_gazebo jetbot_gazebo_stage.launch
 ```
 
