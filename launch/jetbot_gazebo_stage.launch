@@ -14,21 +14,16 @@
         <arg name="world_name" value="$(find jetbot_gazebo)/world/dirt_path_curves.world"/>
         <arg name="verbose" value="true"/>
         <arg name="gui" value="true"/>
-        <!-- System plugins -->
-        <!-- <arg name="extra_gazebo_args" value="-s libgazebo_ros_init.so -s libgazebo_ros_factory.so -g libgazebo_user_camera_control_system.so"/> -->
     </include>
 
     <!-- Node to spawn the SDF model in Gazebo -->
     <node name="$(arg robot_name)_spawn_model" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen">
         <param name="robot_namespace" value="$(arg robot_name)"/>
-        <param name="model" value="$(find jetbot_gazebo)/models/simple_diff_ros/model.sdf"/>
-        <param name="robot_description" command="$(find xacro)/xacro.py '$(find jetbot_gazebo)/models/simple_diff_ros/model.sdf'" />
-        <param name="x" value="$(arg x_pos)"/>
-        <param name="y" value="$(arg y_pos)"/>
-        <param name="z" value="$(arg z_pos)"/>
+        <!-- Correct way to include model and robot description -->
+        <arg name="sdf" value="file://$(find jetbot_gazebo)/models/simple_diff_ros/model.sdf"/>
+        <arg name="model" value="$(arg robot_name)"/>
+        <arg name="x" value="$(arg x_pos)"/>
+        <arg name="y" value="$(arg y_pos)"/>
+        <arg name="z" value="$(arg z_pos)"/>
     </node>
-
-    <!-- You can uncomment and adjust the following if needed 
-    <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-urdf -model $(arg robot_name) -x $(arg x_pos) -y $(arg y_pos) -z $(arg z_pos) -param robot_description" output="screen"/>
-    -->
 </launch>
