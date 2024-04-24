@@ -195,33 +195,24 @@
 			<child>camera_link</child>
 		</joint>	
 
-		<!-- Controls the differential drive robot -->
-		<plugin name='diff_drive' filename='libgazebo_ros_diff_drive.so'>
-			<ros>
-				<namespace>/simple_diff</namespace>
-				<remapping>cmd_vel:=cmd_vel</remapping>
-				<remapping>odom:=odom</remapping>
-			</ros>
-
-			<!-- wheels -->
-			<left_joint>left_wheel_hinge</left_joint>
-			<right_joint>right_wheel_hinge</right_joint>
-
-			<!-- kinematics -->
-			<wheel_separation>0.2</wheel_separation>
-			<wheel_diameter>0.2</wheel_diameter>
-
-			<!-- limits -->
-			<max_wheel_torque>10</max_wheel_torque>
-			<max_wheel_acceleration>0.25</max_wheel_acceleration>
-
-			<!-- output -->
-			<publish_odom>true</publish_odom>
-			<publish_odom_tf>true</publish_odom_tf>
-			<publish_wheel_tf>true</publish_wheel_tf>
-
-			<odometry_frame>odom</odometry_frame>
-			<robot_base_frame>chassis</robot_base_frame>
-		</plugin>   		
+		<plugin name="diff_drive" filename="libgazebo_ros_diff_drive.so">
+			<rosDebugLevel>na</rosDebugLevel>
+			<robotNamespace>/</robotNamespace>
+			<commandTopic>cmd_vel</commandTopic>
+			<odometryTopic>odom</odometryTopic>
+			<odometryFrame>odom</odometryFrame>
+			<robotBaseFrame>base_footprint</robotBaseFrame>
+			<publishWheelTF>false</publishWheelTF>
+			<publishOdomTF>true</publishOdomTF>
+			<publishWheelJointState>false</publishWheelJointState>
+			<wheelSeparation>0.34</wheelSeparation>
+			<wheelDiameter>0.15</wheelDiameter>
+			<wheelAcceleration>10</wheelAcceleration>
+			<wheelTorque>0.5</wheelTorque>
+			<updateRate>1000</updateRate>
+			<odometrySource>1</odometrySource>
+			<leftJoint>left_wheel_hinge</leftJoint>
+			<rightJoint>right_wheel_hinge</rightJoint>
+		</plugin>		
 	</model>
 </sdf>

@@ -90,14 +90,28 @@ rosrun teleop_twist_keyboard teleop_twist_keyboard.py
 View camera topic. Open a new terminal window/tab and run:
 ```bash
 source ~/jetbot_ws/devel/setup.bash
-rosrun image_view image_view image:=/jetbot/camera/image_raw
+rosrun image_view image_view image:=image_raw
 ```
 
+To control the robot around the track, use the following guide for keybindings:
+- q - increates speed increments by 10%
+- z - decreates speed increments by 10%
+- w - 
+- x - 
+- e -
+- c -
+- u -
+- j - 
+- m -
+- i -
+- k - 0's all acceleration
+- , -
+- o -
+- l -
+- . - 
+
 ### Simulation Environments and Image View
-
-![avatar](./world/gazebo_sim_imageview.png)
-
-
+TO DO
 
 ## Object Detection with Yolo and Darknet-ROS
 
@@ -105,6 +119,4 @@ TO DO
 
 ## Contact
 
-For any questions, write to `jopequ@utu.fi` and `qingqli@utu.fi`.
-
-Visit us at [https://tiers.utu.fi](https://tiers.utu.fi)
+For any questions, write to `jared@ltr.dev`
