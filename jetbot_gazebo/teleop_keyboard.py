@@ -3,121 +3,125 @@
 import rospy
 from geometry_msgs.msg import Twist
 from std_msgs.msg import String
+import pygame
+import threading
 
-import sys
-import select
-import termios
-import tty
+# Initialize Pygame
+pygame.init()
+pygame.font.init()
+font = pygame.font.Font(None, 36)
+screen = pygame.display.set_mode((550, 300))
+pygame.display.set_caption('Robot Control Panel')
 
-msg = """
-Control Your JetBot!
----------------------------
-Moving around:
-        w
-   a    s    d
-        x
+# Define constants
+LIN_VEL_STEP_SIZE = 0.1
+ANG_VEL_STEP_SIZE = 0.05
 
-w/x : increase/decrease linear velocity
-a/d : increase/decrease angular velocity
+# Initialize the velocity values
+linear_velocity = 0.0
+angular_velocity = 0.0
+last_linear_velocity = 0.0
+last_angular_velocity = 0.0
+last_key_pressed = ''
 
-space key, s : force stop
+# Publisher for data collection signal
+data_pub = rospy.Publisher('data_collection_signal', String, queue_size=10)
+velocity_pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
 
-c : collect data (when in data collection mode)
-
-CTRL-C to quit
-"""
-
-JETBOT_MAX_LIN_VEL = 0.2
-JETBOT_MAX_ANG_VEL = 2.0
-
-LIN_VEL_STEP_SIZE = 0.01
-ANG_VEL_STEP_SIZE = 0.1
-
-def get_key():
-    tty.setraw(sys.stdin.fileno())
-    rlist, _, _ = select.select([sys.stdin], [], [], 0.1)
-    if rlist:
-        key = sys.stdin.read(1)
-    else:
-        key = ''
-
-    termios.tcsetattr(sys.stdin, termios.TCSADRAIN, termios.tcgetattr(sys.stdin))
-    return key
-
-def print_vels(target_linear_velocity, target_angular_velocity):
-    print('currently:\tlinear velocity {0:.03f}\t angular velocity {1:.03f} '.format(
-        target_linear_velocity,
-        target_angular_velocity))
-
-def constrain(input, low, high):
-    if input < low:
-        return low
-    elif input > high:
-        return high
-    return input
-
-def check_linear_limit_velocity(velocity):
-    return constrain(velocity, -JETBOT_MAX_LIN_VEL, JETBOT_MAX_LIN_VEL)
-
-def check_angular_limit_velocity(velocity):
-    return constrain(velocity, -JETBOT_MAX_ANG_VEL, JETBOT_MAX_ANG_VEL)
-
-def main():
-    rospy.init_node('teleop_keyboard')
-    pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
-    key_pub = rospy.Publisher('keys', String, queue_size=10)
-
-    status = 0
-    target_linear_velocity = 0.0
-    target_angular_velocity = 0.0
-    control_linear_velocity = 0.0
-    control_angular_velocity = 0.0
-
-    try:
-        print(msg)
-        while not rospy.is_shutdown():
-            key = get_key()
-
-            if key:
-                key_msg = String()
-                key_msg.data = str(key)
-                key_pub.publish(key_msg)
-
-            if key == 'w':
-                target_linear_velocity = check_linear_limit_velocity(target_linear_velocity + LIN_VEL_STEP_SIZE)
-                status = status + 1
-            elif key == 'x':
-                target_linear_velocity = check_linear_limit_velocity(target_linear_velocity - LIN_VEL_STEP_SIZE)
-                status = status + 1
-            elif key == 'a':
-                target_angular_velocity = check_angular_limit_velocity(target_angular_velocity + ANG_VEL_STEP_SIZE)
-                status = status + 1
-            elif key == 'd':
-                target_angular_velocity = check_angular_limit_velocity(target_angular_velocity - ANG_VEL_STEP_SIZE)
-                status = status + 1
-            elif key == ' ' or key == 's':
-                target_linear_velocity = 0.0
-                target_angular_velocity = 0.0
-
-            if status == 20:
-                print(msg)
-                status = 0
-
+# Function to publish velocity if there's a change
+def publish_velocity():
+    global last_linear_velocity, last_angular_velocity
+    rospy.init_node('teleop_keyboard', anonymous=True)
+    rate = rospy.Rate(20)  # Adjusted rate
+    while not rospy.is_shutdown():
+        if linear_velocity != last_linear_velocity or angular_velocity != last_angular_velocity:
             twist = Twist()
-            twist.linear.x = control_linear_velocity = target_linear_velocity
-            twist.angular.z = control_angular_velocity = target_angular_velocity
+            twist.linear.x = linear_velocity
+            twist.angular.z = angular_velocity
+            velocity_pub.publish(twist)
+            last_linear_velocity = linear_velocity
+            last_angular_velocity = angular_velocity
+        rate.sleep()
 
-            pub.publish(twist)
+# Function to handle Pygame events
+def check_keys():
+    global linear_velocity, angular_velocity, last_key_pressed
+    running = True
+    while running and not rospy.is_shutdown():
+        screen.fill((0, 0, 0))
+        display_control_instructions()
+        display_text("Set Linear Vel: {:.2f}".format(linear_velocity), (50, 200))
+        display_text("Set Angular Vel: {:.2f}".format(angular_velocity), (50, 230))
 
-    except Exception as e:
-        print(e)
+        pygame.display.flip()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                data_pub.publish("shutdown")
+                rospy.signal_shutdown('X clicked')
+                running = False
+            elif event.type == pygame.KEYDOWN:
+                update_velocity_on_key_press(event.key)
+                last_key_pressed = pygame.key.name(event.key)
+                if event.key == pygame.K_c:
+                    data_pub.publish("start")
+                elif event.key == pygame.K_ESCAPE:
+                    data_pub.publish("shutdown")
+                    rospy.signal_shutdown('ESC key pressed')
+                    running = False
 
-    finally:
-        twist = Twist()
-        twist.linear.x = 0.0
-        twist.angular.z = 0.0
-        pub.publish(twist)
-        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, termios.tcgetattr(sys.stdin))
+            elif event.type == pygame.KEYUP:
+                update_velocity_on_key_release(event.key)
+
+        pygame.time.delay(100)  # Reduce the delay
+
+# Function to display text on Pygame screen
+def display_text(message, position, color=(255, 255, 255)):
+    text = font.render(message, True, color)
+    screen.blit(text, position)
+
+# Display control instructions
+def display_control_instructions():
+    instructions = [
+        "Control Your JetBot!",
+        "w/s: Increase/Decrease linear velocity",
+        "a/d: Increase/Decrease angular velocity",
+        "space: Stop",
+        "c: Capture image",
+        "ESC: Quit and shutdown data collection"
+    ]
+    y_pos = 20
+    for line in instructions:
+        display_text(line, (50, y_pos))
+        y_pos += 30
+
+# Update velocities based on key press
+def update_velocity_on_key_press(key):
+    global linear_velocity, angular_velocity
+    if key == pygame.K_w:
+        linear_velocity = LIN_VEL_STEP_SIZE
+    elif key == pygame.K_s:
+        linear_velocity = -LIN_VEL_STEP_SIZE
+    elif key == pygame.K_a:
+        angular_velocity = ANG_VEL_STEP_SIZE
+    elif key == pygame.K_d:
+        angular_velocity = -ANG_VEL_STEP_SIZE
+    elif key == pygame.K_SPACE:
+        linear_velocity = 0.0
+        angular_velocity = 0.0
+
+# Update velocities on key release to zero them out
+def update_velocity_on_key_release(key):
+    global linear_velocity, angular_velocity
+    if key in [pygame.K_w, pygame.K_s]:
+        linear_velocity = 0.0
+    if key in [pygame.K_a, pygame.K_d]:
+        angular_velocity = 0.0
 
 if __name__ == '__main__':
-    main()
+    key_thread = threading.Thread(target=check_keys)
+    key_thread.start()
+    try:
+        publish_velocity()
+    finally:
+        pygame.quit()
+        key_thread.join()

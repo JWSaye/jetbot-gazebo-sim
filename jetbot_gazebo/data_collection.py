@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 import rospy
 import numpy as np
@@ -10,14 +9,17 @@ from cv_bridge import CvBridge, CvBridgeError
 from datetime import datetime
 import os
 import signal
-import threading
+import sys
 
 class DataCollectionNode(object):
     def __init__(self):
         rospy.init_node('data_collection')
 
+        # Subscribe to the image topic
         self.image_subscriber = rospy.Subscriber('image_raw', Image, self.image_listener)
-        self.keys_subscriber = rospy.Subscriber('keys', String, self.key_listener)
+
+        # Subscribe to the data collection signal topic
+        self.data_signal_sub = rospy.Subscriber('data_collection_signal', String, self.signal_listener)
 
         self.data_path = rospy.get_param('~data_path', None)
         if self.data_path is None:
@@ -38,9 +40,13 @@ class DataCollectionNode(object):
         cv2.destroyAllWindows()
         sys.exit(0)
 
-    def key_listener(self, msg):
-        if msg.data.lower() == 'c':
+    def signal_listener(self, msg):
+        if msg.data == "start":
             self.collect = True
+        elif msg.data == "shutdown":
+            rospy.signal_shutdown('Shutdown Signal Received')
+            cv2.destroyAllWindows()
+            sys.exit(0)
 
     def image_listener(self, msg):
         if not self.collect:
@@ -54,7 +60,7 @@ class DataCollectionNode(object):
 
         cv2.imshow("Image Window", cv_image)
         cv2.setMouseCallback("Image Window", self.click_event)
-        
+
         key = cv2.waitKey(1) & 0xFF
         if key == 27:  # ESC key
             rospy.signal_shutdown("ESC key pressed.")

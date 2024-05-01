@@ -15,8 +15,8 @@ import torchvision.models as models
 from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau
 from datetime import datetime
 
-from jetbot_ros.dnn.reshape_model import reshape_model
-from jetbot_ros.dnn.xy_dataset import XYDataset
+from jetbot_gazebo.dnn.reshape_model import reshape_model
+from jetbot_gazebo.dnn.xy_dataset import XYDataset
 
 
 model_names = sorted(name for name in models.__dict__

@@ -24,7 +24,7 @@ catkin_install_python(PROGRAMS jetbot_gazebo/teleop_keyboard.py jetbot_gazebo/da
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
-add_executable(${PROJECT_NAME} jetbot_gazebo/teleop_keyboard.py)
+# add_executable(${PROJECT_NAME} jetbot_gazebo/teleop_keyboard.py)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
