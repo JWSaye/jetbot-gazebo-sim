@@ -1,89 +1,78 @@
-import os
-import sys
-import math
-import rclpy
-import fnmatch
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import rospy
 import numpy as np
 import cv2
-
-from rclpy.node import Node
-from datetime import datetime
-from PIL import Image as PIL_Image
-
-from std_msgs.msg import String
 from sensor_msgs.msg import Image
+from std_msgs.msg import String
+from cv_bridge import CvBridge, CvBridgeError
+from datetime import datetime
+import os
+import signal
+import threading
 
-
-class DataCollectionNode(Node):
-    """
-    ROS note for collecting / annotating images.
-    """
+class DataCollectionNode(object):
     def __init__(self):
-        super().__init__('data_collection', namespace='jetbot')
-        
-        # create topics
-        self.image_subscriber = self.create_subscription(Image, 'camera/image_raw', self.image_listener, 10)
-        self.keys_subscriber = self.create_subscription(String, 'keys', self.key_listener, 10)
-        
-        # get node parameters
-        self.declare_parameter('data_path')
-        self.data_path = self.get_parameter('data_path').value
-        self.get_logger().info(f"data_path = {self.data_path}")
+        rospy.init_node('data_collection')
 
+        self.image_subscriber = rospy.Subscriber('image_raw', Image, self.image_listener)
+        self.keys_subscriber = rospy.Subscriber('keys', String, self.key_listener)
+
+        self.data_path = rospy.get_param('~data_path', None)
         if self.data_path is None:
-            raise ValueError('must specify data_path parameter (e.g. data_path:=/path/to/save/your/dataset)')
+            raise ValueError("You must specify a data path parameter.")
 
-        os.makedirs(self.data_path, exist_ok=True)
-        
+        if not os.path.exists(self.data_path):
+            os.makedirs(self.data_path)
+
+        self.bridge = CvBridge()
         self.collect = False
         self.xy_label = None
-        
-    def key_listener(self, msg):
-        if msg.data == 'c':
-            self.collect = True
-        
-    def image_listener(self, msg):
-        self.get_logger().debug(f"recieved image:  {msg.width}x{msg.height}, {msg.encoding}")
-        #self.get_logger().debug(str(msg.header))
 
-        if msg.encoding != 'rgb8' and msg.encoding != 'bgr8':
-            raise ValueError(f"image encoding is '{msg.encoding}' (expected rgb8 or bgr8)")
-        
+        # Setup signal handler for clean shutdown
+        signal.signal(signal.SIGINT, self.signal_handler)
+
+    def signal_handler(self, signal, frame):
+        rospy.signal_shutdown('CTRL-C Pressed')
+        cv2.destroyAllWindows()
+        sys.exit(0)
+
+    def key_listener(self, msg):
+        if msg.data.lower() == 'c':
+            self.collect = True
+
+    def image_listener(self, msg):
         if not self.collect:
             return
-            
-        img = np.frombuffer(msg.data, dtype=np.uint8).reshape(msg.height, msg.width, -1)
 
-        if msg.encoding == 'bgr8':
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            
-        title = 'Click on path center point'
-        cv2.imshow(title, cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
-        cv2.setMouseCallback(title, self.click_event)
-        cv2.waitKey(0)
+        try:
+            cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+        except CvBridgeError as e:
+            rospy.logerr("CvBridge Error: {0}".format(e))
+            return
+
+        cv2.imshow("Image Window", cv_image)
+        cv2.setMouseCallback("Image Window", self.click_event)
         
-        if self.xy_label is not None:
-            img_path = os.path.join(self.data_path, f"xy_{self.xy_label[0]:03d}_{self.xy_label[1]:03d}_{datetime.now().strftime('%Y%m%d-%H%M%S-%f')}.jpg")
-            PIL_Image.fromarray(img).save(img_path)
-            self.get_logger().info(f"saved {msg.width}x{msg.height} image to '{img_path}'")
-            self.get_logger().info(f"there are {len(fnmatch.filter(os.listdir(self.data_path), '*.jpg'))} images in the dataset")
-            
-        self.collect = False
-        self.xy_label = None
-    
+        key = cv2.waitKey(1) & 0xFF
+        if key == 27:  # ESC key
+            rospy.signal_shutdown("ESC key pressed.")
+            cv2.destroyAllWindows()
+
+        if self.xy_label:
+            img_path = os.path.join(self.data_path, "xy_{0:03d}_{1:03d}_{2}.jpg".format(
+                self.xy_label[0], self.xy_label[1], datetime.now().strftime('%Y%m%d-%H%M%S-%f')))
+            cv2.imwrite(img_path, cv_image)
+            rospy.loginfo("Saved image to: {0}".format(img_path))
+            self.collect = False
+            self.xy_label = None
+            cv2.destroyAllWindows()
+
     def click_event(self, event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
-            self.xy_label = (x,y)
-            cv2.destroyAllWindows()    
-        
-def main(args=None):
-    rclpy.init(args=args)
-    node = DataCollectionNode()
-    node.get_logger().info("Press 'c' in the teleop window to collect data")
-    rclpy.spin(node)
-    node.destroy_node()
-    rclpy.shutdown()
+            self.xy_label = (x, y)
 
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    data_collection_node = DataCollectionNode()
+    rospy.spin()

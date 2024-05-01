@@ -71,44 +71,31 @@ sudo apt install ros-melodic-turtlebot3-gazebo ros-melodic-image-view
 
 ## Run the simulator
 
-Run the simulator from the terminal with:
+Setup the environment for the simulator from the terminal with:
 ```bash
 echo "source ~/jetbot_ws/devel/setup.bash" >> ~/.bashrc
 echo "export GAZEBO_MODEL_PATH=/usr/share/gazebo-9/models:~/jetbot_ws/src/jetbot-gazebo-sim/models:$GAZEBO_MODEL_PATH" >> ~/.bashrc
 source ~/.bashrc
-
+```
+Run the simulatation using the command:
+```bash
 roslaunch jetbot_gazebo jetbot_gazebo_stage.launch
 ```
 
-Control the Jetbot by keyboard. Open a new terminal window/tab and run:
+Setup control of the Jetbot by keyboard. Open a new terminal window/tab and run:
 ```bash
 sudo apt install ros-melodic-teleop-twist-keyboard
 source ~/jetbot_ws/devel/setup.bash
+```
+To test control of the jetbot, run:
+```bash
 rosrun teleop_twist_keyboard teleop_twist_keyboard.py
 ```
 
 View camera topic. Open a new terminal window/tab and run:
 ```bash
-source ~/jetbot_ws/devel/setup.bash
 rosrun image_view image_view image:=image_raw
 ```
-
-To control the robot around the track, use the following guide for keybindings:
-- q - increates speed increments by 10%
-- z - decreates speed increments by 10%
-- w - 
-- x - 
-- e -
-- c -
-- u -
-- j - 
-- m -
-- i -
-- k - 0's all acceleration
-- , -
-- o -
-- l -
-- . - 
 
 ### Simulation Environments and Image View
 TO DO

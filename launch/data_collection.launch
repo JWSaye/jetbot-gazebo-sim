@@ -1,0 +1,15 @@
+<launch>
+    <!-- Include the teleop keyboard launch file from the correct local package path -->
+    <include file="/home/jwsaye/jetbot_ws/src/jetbot-gazebo-sim/launch/teleop_keyboard.launch"/>
+
+    <!-- Declare arguments with default values -->
+    <arg name="data_root" default="/home/jwsaye/jetbot_ws/src/jetbot-gazebo-sim/data/datasets"/>
+
+    <!-- Declare the data_path argument to receive the value from the command line -->
+    <arg name="data_path" default="default"/>
+
+    <!-- Node for data collection -->
+    <node name="data_collection" pkg="jetbot_gazebo" type="data_collection.py" output="screen">
+        <param name="data_path" value="$(arg data_root)/$(arg data_path)"/>
+    </node>
+</launch>

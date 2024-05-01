@@ -1,17 +1,42 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(jetbot_gazebo)
 
+find_package(catkin REQUIRED COMPONENTS
+  controller_manager
+  joint_state_controller
+  robot_state_publisher
+)
+
+catkin_package(
+#  INCLUDE_DIRS include
+#  LIBRARIES jetbot_control
+#  CATKIN_DEPENDS controller_manager joint_state_controller robot_state_publisher
+#  DEPENDS system_lib
+)
+
+include_directories(
+# include
+  ${catkin_INCLUDE_DIRS}
+)
+
+# Assuming your Python scripts are in a 'jetbot_gazebo' directory within your package
+catkin_install_python(PROGRAMS jetbot_gazebo/teleop_keyboard.py jetbot_gazebo/data_collection.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
+add_executable(${PROJECT_NAME} jetbot_gazebo/teleop_keyboard.py)
+
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS
-  controller_manager
-  joint_state_controller
-  robot_state_publisher
-)
+# find_package(catkin REQUIRED COMPONENTS
+#   controller_manager
+#   joint_state_controller
+#   robot_state_publisher
+# )
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -102,12 +127,12 @@ find_package(catkin REQUIRED COMPONENTS
 ## LIBRARIES: libraries you create in this project that dependent projects also need
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
-catkin_package(
+# catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES jetbot_control
 #  CATKIN_DEPENDS controller_manager joint_state_controller robot_state_publisher
 #  DEPENDS system_lib
-)
+# )
 
 ###########
 ## Build ##
@@ -115,10 +140,10 @@ catkin_package(
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
-include_directories(
+# include_directories(
 # include
-  ${catkin_INCLUDE_DIRS}
-)
+#   ${catkin_INCLUDE_DIRS}
+# )
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}

@@ -1,9 +1,9 @@
 <launch>
     <!-- Node to launch teleop_keyboard from jetbot_ros package in a new lxterminal window -->
-    <node name="teleop_keyboard" pkg="jetbot_gazebo" type="teleop_keyboard" output="screen" respawn="false">
+    <node name="teleop_keyboard" pkg="jetbot_gazebo" type="teleop_keyboard.py" output="screen" respawn="false">
         <!-- Use launch-prefix to open the node in a new lxterminal window -->
         <param name="use_sim_time" value="false"/>
         <env name="TERM" value="xterm-256color"/>
-        <launch-prefix>lxterminal -e</launch-prefix>
+        <!-- <launch-prefix>lxterminal -e</launch-prefix> -->
     </node>
 </launch>
