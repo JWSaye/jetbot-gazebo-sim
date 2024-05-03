@@ -1,0 +1,14 @@
+<launch>
+    <!-- Declare arguments with default values -->
+    <arg name="model"/>
+    <arg name="speed_gain" default="0.15"/>
+    <arg name="steering_gain" default="0.4"/>
+
+    <!-- Node for navigation model -->
+    <node name="nav_model" pkg="jetbot_gazebo" type="nav_model.py" output="screen">
+        <param name="model" value="$(arg model)"/>
+        <param name="speed_gain" value="$(arg speed_gain)"/>
+        <param name="steering_gain" value="$(arg steering_gain)"/>
+        <param name="visualize" value="true"/>
+    </node>
+</launch>

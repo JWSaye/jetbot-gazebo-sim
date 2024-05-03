@@ -55,3 +55,9 @@ data/datasets/*
 
 # But not the directory itself
 !data/datasets/.gitignore
+
+# Ignore everything in the data/datasets directory
+data/models/*
+
+# But not the directory itself
+!data/models/.gitignore

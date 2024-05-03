@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import os
@@ -15,8 +15,8 @@ import torchvision.models as models
 from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau
 from datetime import datetime
 
-from reshape_model import reshape_model
-from xy_dataset import XYDataset
+from jetbot_gazebo.dnn.reshape_model import reshape_model
+from jetbot_gazebo.dnn.xy_dataset import XYDataset
 
 
 model_names = sorted(name for name in models.__dict__
@@ -35,7 +35,7 @@ class NavigationModel:
         Create or load a model.
         """
         if type != 'classification' and type != 'regression':
-            raise ValueError("type must be 'classification' or 'regression' (was '{0}')".format(type))
+            raise ValueError("type must be 'classification' or 'regression' (was '{type}')")
             
         self.type = type
         self.resolution = resolution
@@ -49,21 +49,21 @@ class NavigationModel:
             
         # load model
         if len(os.path.splitext(model)[1]) > 0:
-            print("=> loading model '{0}'".format(model))
-            checkpoint = torch.load(model, map_location=torch.device('cpu'))
+            print(f"=> loading model '{model}'")
+            checkpoint = torch.load(model)
             
             if self.type != checkpoint['type']:
-                raise ValueError("'{0}' is a {1} model, but expected a {2} model".format(model, checkpoint['type'], self.type))
+                raise ValueError(f"'{model}' is a {checkpoint['type']} model, but expected a {self.type} model")
                 
-            print("     - arch           {0}".format(checkpoint['arch']))
-            print("     - type           {0}".format(checkpoint['type']))
-            print("     - outputs        {0}".format(checkpoint['num_outputs']))
-            print("     - train loss     {0:.8f}".format(checkpoint['train_loss']))
-            print("     - val loss       {0:.8f}".format(checkpoint['val_loss']))
+            print(f"     - arch           {checkpoint['arch']}")
+            print(f"     - type           {checkpoint['type']}")
+            print(f"     - outputs        {checkpoint['num_outputs']}")
+            print(f"     - train loss     {checkpoint['train_loss']:.8f}")
+            print(f"     - val loss       {checkpoint['val_loss']:.8f}")
             
             if self.classification:
-                print("     - train accuracy {0:.8f}".format(checkpoint['train_accuracy']))
-                print("     - val accuracy   {0:.8f}".format(checkpoint['val_accuracy']))
+                print(f"     - train accuracy {checkpoint['train_accuracy']:.8f}")
+                print(f"     - val accuracy   {checkpoint['val_accuracy']:.8f}")
 
             self.model_arch = checkpoint['arch']
             self.num_outputs = checkpoint['num_outputs']
@@ -72,23 +72,26 @@ class NavigationModel:
             self.model = reshape_model(self.model, self.model_arch, self.num_outputs)
             
             self.model.load_state_dict(checkpoint['state_dict'])
+            self.model.cuda()
         else:
-            print("=> creating model '{0}'".format(model))
+            print(f"=> creating model '{model}'")
             self.model = models.__dict__[model](pretrained=True)
             self.model_arch = model
             self.num_outputs = 1000    # default classes for torchvision models
     
+        self.model.cuda()
+        
         # warmup model inference
-        print("=> running model warm-up")
+        print(f"=> running model warm-up")
         
         for i in range(warmup):
             self.model.eval()
             
             with torch.no_grad():
-                input = torch.ones((1, 3, resolution, resolution))
+                input = torch.ones((1, 3, resolution, resolution)).cuda()
                 output = self.model(input)
         
-        print("=> done with model warm-up")
+        print(f"=> done with model warm-up")
         
     @property
     def classification(self):
@@ -97,97 +100,35 @@ class NavigationModel:
     @property
     def regression(self):
         return self.type == 'regression'
-    
+        
     def infer(self, image):
-        # Ensure the image is converted and transformed properly
-        image = self.data_transforms(image).unsqueeze(0)
+        image = self.data_transforms(image).unsqueeze(0).cuda()
 
-        # Set the model to evaluation mode
         self.model.eval()
-
+        
         with torch.no_grad():
             output = self.model(image)
-
+            
             if self.classification:
-                # Apply softmax to get probabilities for classification
-                output = nn.functional.softmax(output, dim=1)
+                output = nn.functional.softmax(output)
                 prob, cls = torch.max(output, 1)
                 return cls.item(), prob.item()
             else:
-                # For regression, return the output directly
-                return output.detach().squeeze().numpy() if output.requires_grad else output.squeeze().numpy()
-
-
-    def load_dataset(self, dataset, batch_size=2, workers=1, train_split=0.8):
-        """
-        Load dataset from the specified path
-        """
-        normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                         std=[0.229, 0.224, 0.225])
-                            
-        if self.type == 'classification':
-            dataset = datasets.ImageFolder(dataset, self.data_transforms)
-        elif self.type == 'regression':
-            dataset = XYDataset(dataset, self.data_transforms)
-            
-        # split into train/val
-        if train_split > 0:
-            lengths = [int(len(dataset) * train_split)]
-            lengths.append(len(dataset) - lengths[0])
-
-            train_dataset, val_dataset = torch.utils.data.random_split(dataset, lengths)
-                
-            val_loader = torch.utils.data.DataLoader(
-                val_dataset, batch_size=batch_size, num_workers=workers,
-                shuffle=False, pin_memory=True)
-        else:
-            train_dataset = dataset
-            val_dataset = None
-            val_loader = None
-            
-        # create dataloaders
-        train_loader = torch.utils.data.DataLoader(
-            train_dataset, batch_size=batch_size, num_workers=workers,
-            shuffle=True, pin_memory=True)
-
-        print('=> train samples:   {0}'.format(len(train_dataset)))
-        print('=> val samples:     {0}'.format(len(val_dataset) if val_dataset is not None else 0))
-        
-        # reshape model if needed   
-        if self.type == 'classification':
-            num_outputs = len(dataset.classes)
-            print('=> dataset classes: {0} ({1})'.format(num_outputs, str(dataset.classes)))
-        else:
-            num_outputs = 2
-            
-        if self.num_outputs != num_outputs:
-            self.model = reshape_model(self.model, self.model_arch, num_outputs)
-            self.num_outputs = num_outputs
-
-        # get class weights
-        if self.type == 'classification':
-            class_weights, class_counts = self.get_class_weights(dataset)
-            
-            print('=> class distribution:')
-            
-            for idx, (weight, count) in enumerate(zip(class_weights, class_counts)):
-                print('     [{0}] - {1} samples ({2:.4f}), weight {3:.8f}'.format(idx, count, count/sum(class_counts), weight))
-        else:
-            class_weights = [1.0] * self.num_outputs
-            
-        return train_loader, val_loader, class_weights
+                return output.detach().squeeze().cpu().numpy() if output.requires_grad else output.squeeze().cpu().numpy()
         
     def train(self, dataset, epochs=10, batch_size=1, learning_rate=0.01, scheduler='StepLR_75', 
               workers=1, train_split=0.8, print_freq=10, use_class_weights=True, 
-              save="data/models/{0}".format(datetime.now().strftime('%Y%m%d%H%M'))):
+              save=f"data/models/{datetime.now().strftime('%Y%m%d%H%M')}"):
         """
         Train the model on a dataset
         """
         train_loader, val_loader, class_weights = self.load_dataset(dataset, batch_size, workers, train_split)
         
+        self.model.cuda()
+        
         # setup model, loss function, and solver
         if self.classification:
-            criterion = nn.CrossEntropyLoss(weight=torch.Tensor(class_weights) if use_class_weights else None)
+            criterion = nn.CrossEntropyLoss(weight=torch.Tensor(class_weights) if use_class_weights else None).cuda()
         else:
             criterion = nn.MSELoss()
             
@@ -203,9 +144,8 @@ class NavigationModel:
             train_accuracy = 0.0
             
             for i, (images, target) in enumerate(train_loader):
-                # Ensure tensors are on CPU
-                images = images
-                target = target
+                images = images.cuda(non_blocking=True)
+                target = target.cuda(non_blocking=True)
                 
                 # compute model output
                 output = self.model(images)
@@ -223,9 +163,9 @@ class NavigationModel:
                 
                 if i % print_freq == 0:
                     if self.classification:
-                        print("Epoch {0}:  train=[{1}/{2}]  lr={3:.2g}  loss={4:.8f}  accuracy={5:.8f}".format(epoch, i, len(train_loader), scheduler.get_last_lr()[0], train_loss/(i+1), train_accuracy/(i+1)))
+                        print(f"Epoch {epoch}:  train=[{i}/{len(train_loader)}]  lr={scheduler._last_lr[0]:.2g}  loss={train_loss/(i+1):.8f}  accuracy={train_accuracy/(i+1):.8f}")
                     else:
-                        print("Epoch {0}:  train=[{1}/{2}]  lr={3:.2g}  loss={4:.8f}".format(epoch, i, len(train_loader), scheduler.get_last_lr()[0], train_loss/(i+1)))
+                        print(f"Epoch {epoch}:  train=[{i}/{len(train_loader)}]  lr={scheduler._last_lr[0]:.2g}  loss={train_loss/(i+1):.8f}")
   
             if isinstance(scheduler, ReduceLROnPlateau):
                 scheduler.step(metrics=train_loss)
@@ -242,11 +182,11 @@ class NavigationModel:
                 val_accuracy = train_accuracy
                 
             if self.classification:
-                print("Epoch {0}:  train_loss={1:.8f}  train_accuracy={2:.8f}".format(epoch, train_loss, train_accuracy))
-                print("Epoch {0}:  val_loss={1:.8f}  val_accuracy={2:.8f}".format(epoch, val_loss, val_accuracy))
+                print(f"Epoch {epoch}:  train_loss={train_loss:.8f}  train_accuracy={train_accuracy:.8f}")
+                print(f"Epoch {epoch}:  val_loss={val_loss:.8f}  val_accuracy={val_accuracy:.8f}")
             else:
-                print("Epoch {0}:  train_loss={1:.8f}".format(epoch, train_loss))
-                print("Epoch {0}:  val_loss={1:.8f}".format(epoch, val_loss))
+                print(f"Epoch {epoch}:  train_loss={train_loss:.8f}")
+                print(f"Epoch {epoch}:  val_loss={val_loss:.8f}")
                 
             if save:
                 checkpoint = {
@@ -283,9 +223,8 @@ class NavigationModel:
         
         with torch.no_grad():
             for i, (images, target) in enumerate(val_loader):
-                # Ensure tensors are on CPU
-                images = images
-                target = target
+                images = images.cuda(non_blocking=True)
+                target = target.cuda(non_blocking=True)
                 
                 # compute model output
                 output = self.model(images)
@@ -298,9 +237,9 @@ class NavigationModel:
                 
                 if i % print_freq == 0:
                     if self.classification:
-                        print("Epoch {0}:  val=[{1}/{2}]  loss={3:.8f}  accuracy={4:.8f}".format(epoch, i, len(val_loader), val_loss/(i+1), val_accuracy/(i+1)))
+                        print(f"Epoch {epoch}:  val=[{i}/{len(val_loader)}]  loss={val_loss/(i+1):.8f}  accuracy={val_accuracy/(i+1):.8f}")
                     else:
-                        print("Epoch {0}:  val=[{1}/{2}]  loss={3:.8f}".format(epoch, i, len(val_loader), val_loss/(i+1)))
+                        print(f"Epoch {epoch}:  val=[{i}/{len(val_loader)}]  loss={val_loss/(i+1):.8f}")
                     
         val_loss /= len(val_loader)
         val_accuracy /= len(val_loader)
@@ -322,13 +261,8 @@ class NavigationModel:
             filename = os.path.join(path, filename)
             best_filename = os.path.join(path, best_filename)
             
-        dirname = os.path.dirname(filename)
-        if not os.path.exists(dirname):
-            os.makedirs(dirname)
-        
-        best_dirname = os.path.dirname(best_filename)
-        if not os.path.exists(best_dirname):
-            os.makedirs(best_dirname)
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
+        os.makedirs(os.path.dirname(best_filename), exist_ok=True)
  
         # save the checkpoint
         torch.save(state, filename)
@@ -339,6 +273,84 @@ class NavigationModel:
             print("saved best model to:  " + best_filename)
         else:
             print("saved checkpoint to:  " + filename)
+        
+    def load_dataset(self, dataset, batch_size=2, workers=1, train_split=0.8):
+        """
+        Load dataset from the specified path
+        """
+        normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                         std=[0.229, 0.224, 0.225])
+                            
+        if self.type == 'classification':
+            dataset = datasets.ImageFolder(dataset, self.data_transforms)
+        elif self.type == 'regression':
+            dataset = XYDataset(dataset, self.data_transforms)
+            
+        # split into train/val
+        if train_split > 0:
+            lengths = [int(len(dataset) * train_split)]
+            lengths.append(len(dataset) - lengths[0])
+
+            train_dataset, val_dataset = torch.utils.data.random_split(
+                dataset, lengths, 
+                generator=torch.Generator().manual_seed(1))
+                
+            val_loader = torch.utils.data.DataLoader(
+                val_dataset, batch_size=batch_size, num_workers=workers,
+                shuffle=False, pin_memory=True)
+        else:
+            train_dataset = dataset
+            val_dataset = None
+            val_loader = None
+            
+        # create dataloaders
+        train_loader = torch.utils.data.DataLoader(
+            train_dataset, batch_size=batch_size, num_workers=workers,
+            shuffle=True, pin_memory=True)
+
+        print(f'=> train samples:   {len(train_dataset)}')
+        print(f'=> val samples:     {len(val_dataset) if val_dataset is not None else 0}')
+        
+        # reshape model if needed   
+        if self.type == 'classification':
+            num_outputs = len(dataset.classes)
+            print(f'=> dataset classes: {dataset_classes} ({str(dataset.classes)})')
+        else:
+            num_outputs = 2
+            
+        if self.num_outputs != num_outputs:
+            self.model = reshape_model(self.model, self.model_arch, num_outputs)
+            self.num_outputs = num_outputs
+
+        # get class weights
+        if self.type == 'classification':
+            class_weights, class_counts = self.get_class_weights(dataset)
+            
+            print('=> class distribution:')
+            
+            for idx, (weight, count) in enumerate(zip(class_weights, class_counts)):
+                print(f'     [{idx}] - {count} samples ({count/sum(class_counts):.4f}), weight {weight:.8f}')
+        else:
+            class_weights = [1.0] * self.num_outputs
+            
+        return train_loader, val_loader, class_weights
+ 
+    def get_class_weights(self, dataset):
+        counts = [0] * len(dataset.classes) 
+        weights = [0.] * len(dataset.classes)   
+        
+        for item in dataset.imgs:                                                         
+            counts[item[1]] += 1                                                     
+                                            
+        max_count = max(counts)
+        
+        for i in range(len(dataset.classes)):   
+            if counts[i] > 0:
+                weights[i] = max_count / counts[i]   
+            else:
+                weights[i] = 1.0
+                
+        return weights, counts          
 
     @staticmethod
     def _create_scheduler(scheduler, optimizer):
@@ -350,7 +362,7 @@ class NavigationModel:
         elif scheduler.startswith('ReduceLROnPlateau'):
             return ReduceLROnPlateau(optimizer, patience=NavigationModel._parse_param(scheduler, default=10))
         else:
-            raise ValueError("invalid scheduler '{0}'".format(scheduler)) 
+            raise ValueError(f"invalid scheduler '{scheduler}'") 
         
     @staticmethod
     def _parse_param(str, default):
@@ -363,3 +375,4 @@ class NavigationModel:
             return default
 
         return int(str[idx+1:])
+ 

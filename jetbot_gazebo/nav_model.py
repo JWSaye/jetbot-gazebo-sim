@@ -1,57 +1,54 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import os
 import sys
 import math
-import rclpy
+import rospy
 import numpy as np
-import PIL
 import cv2
+from PIL import Image
 
-from rclpy.node import Node
-
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image as ImageMsg
 from geometry_msgs.msg import Twist
 
-from jetbot_ros.dnn.navigation_model import NavigationModel
+from dnn.navigation_model import NavigationModel
 
-
-class NavModelNode(Node):
+class NavModelNode(object):
     """
     Navigation model ROS node that uses PyTorch on camera images
     """
     def __init__(self):
-        super().__init__('nav_model', namespace='jetbot')
-        
+        rospy.init_node('nav_model', anonymous=True)
+
         # create topics
-        self.image_subscriber = self.create_subscription(Image, 'camera/image_raw', self.image_listener, 10)
-        self.velocity_publisher = self.create_publisher(Twist, 'cmd_vel', 10)
+        self.image_subscriber = rospy.Subscriber('image_raw', ImageMsg, self.image_listener, queue_size=10)
+        self.velocity_publisher = rospy.Publisher('cmd_vel', Twist, queue_size=10)
         
         # get node parameters
-        self.declare_parameter('model')
-        self.declare_parameter('type', 'regression')
-        self.declare_parameter('speed_gain', 0.15)
-        self.declare_parameter('steering_gain', 0.4)
-        self.declare_parameter('visualize', False)
+        self.model_path = rospy.get_param('~model', None)
+        self.model_type = rospy.get_param('~type', 'regression')
+        self.speed_gain = rospy.get_param('~speed_gain', 0.15)
+        self.steering_gain = rospy.get_param('~steering_gain', 0.4)
+        self.visualize = rospy.get_param('~visualize', False)
         
-        model_path = self.get_parameter('model').value
-        model_type = self.get_parameter('type').value
+        rospy.loginfo("model = {}".format(self.model_path))
+        rospy.loginfo("type = {}".format(self.model_type))
+        rospy.loginfo("speed_gain = {}".format(self.speed_gain))
+        rospy.loginfo("steering_gain = {}".format(self.steering_gain))
         
-        self.get_logger().info(f"model = {model_path}")
-        self.get_logger().info(f"type = {model_type}")
-        self.get_logger().info(f"speed_gain = {self.get_parameter('speed_gain').value}")
-        self.get_logger().info(f"steering_gain = {self.get_parameter('steering_gain').value}")
-        
-        if model_path is None:
+        if self.model_path is None:
             raise ValueError('must specify PyTorch model path parameter (e.g. model:=/path/to/your/model.pth)')
         
         # load model
-        self.model = NavigationModel(model_path, type=model_type)
+        self.model = NavigationModel(self.model_path, type=self.model_type)
 
     def image_listener(self, msg):
-        self.get_logger().debug(f"recieved image:  {msg.width}x{msg.height}, {msg.encoding}")
-        #self.get_logger().debug(str(msg.header))
+        rospy.logdebug("recieved image: {}x{}, {}".format(msg.width, msg.height, msg.encoding))
+        #rospy.logdebug(str(msg.header))
 
-        if msg.encoding != 'rgb8' and msg.encoding != 'bgr8':
-            raise ValueError(f"image encoding is '{msg.encoding}' (expected rgb8 or bgr8)")
+        if msg.encoding not in ['rgb8', 'bgr8']:
+            raise ValueError("image encoding is '{}' (expected rgb8 or bgr8)".format(msg.encoding))
             
         img = np.frombuffer(msg.data, dtype=np.uint8).reshape(msg.height, msg.width, -1)
 
@@ -59,36 +56,36 @@ class NavModelNode(Node):
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             
         # predict the center point
-        xy = self.model.infer(PIL.Image.fromarray(img))
+        xy = self.model.infer(Image.fromarray(img))
         
         x = xy[0]
         y = (0.5 - xy[1]) / 2.0
         
         # convert to steering angle
         steering_angle = np.arctan2(x, y)
-        self.get_logger().info(f'x={x:.2f}  y={y:.2f}  angle={math.degrees(steering_angle):.1f}')
+        rospy.loginfo('x={:.2f}  y={:.2f}  angle={:.1f}'.format(x, y, math.degrees(steering_angle)))
                 
         # publish velocity message
         twist = Twist()
         
-        twist.linear.x = self.get_parameter('speed_gain').value
+        twist.linear.x = self.speed_gain
         twist.linear.y = 0.0
         twist.linear.z = 0.0
         
         twist.angular.x = 0.0
         twist.angular.y = 0.0
-        twist.angular.z = -steering_angle * self.get_parameter('steering_gain').value
+        twist.angular.z = -steering_angle * self.steering_gain
         
         self.velocity_publisher.publish(twist)
 
         # visualization
-        if self.get_parameter('visualize').value:
+        if self.visualize:
             px = min(max(((xy[0] + 1) / 2) * img.shape[1], 0), img.shape[1])
             py = min(max(((xy[1] + 1) / 2) * img.shape[0], 0), img.shape[0])
             
             cv_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            cv_img = cv2.circle(cv_img, (int(px),int(py)), radius=5, color=(50,155,255), thickness=2)
-            cv2.imshow(f"{self.get_namespace()}/{self.get_name()} Inference", cv_img)
+            cv_img = cv2.circle(cv_img, (int(px), int(py)), radius=5, color=(50, 155, 255), thickness=2)
+            cv2.imshow("{}/{} Inference".format(rospy.get_namespace(), rospy.get_name()), cv_img)
             cv2.waitKey(1)            
                 
     def destroy_node(self):
@@ -102,21 +99,18 @@ class NavModelNode(Node):
         twist.angular.y = 0.0
         twist.angular.z = 0.0
         
-        self.get_logger().info('shutting down, stopping robot...')
+        rospy.loginfo('shutting down, stopping robot...')
         self.velocity_publisher.publish(twist)
         
-        super().destroy_node()
-        
-def main(args=None):
-    rclpy.init(args=args)
+
+def main():
     node = NavModelNode()
-    node.get_logger().info("starting processing loop...")
+    rospy.loginfo("starting processing loop...")
     try:
-        rclpy.spin(node)
+        rospy.spin()
     except KeyboardInterrupt:
         pass
     node.destroy_node()
-    rclpy.shutdown()
 
 
 if __name__ == "__main__":
